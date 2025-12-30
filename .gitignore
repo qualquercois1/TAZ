@@ -1,0 +1,19 @@
+# --- Ambientes Virtuais (O que você pediu) ---
+venv/
+.venv/
+env/
+.env
+
+# --- Lixo do Python (Importante bloquear também) ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Logs e Dados temporários ---
+*.log
+
+# --- VS Code (Configurações locais do seu editor) ---
+.vscode/
+
+# --- Arquivos do Windows ---
+Thumbs.db
