@@ -19,30 +19,44 @@ aggregation_options     = sum
 # --- Vieses (Bias) ---
 bias_init_mean          = 0.0
 bias_init_stdev         = 1.0
+bias_init_type          = gaussian
 bias_max_value          = 30.0
 bias_min_value          = -30.0
 bias_mutate_power       = 0.5
 bias_mutate_rate        = 0.7
 bias_replace_rate       = 0.1
 
+# --- Resposta (Response) ---
+response_init_mean      = 1.0
+response_init_stdev     = 0.0
+response_init_type      = gaussian
+response_max_value      = 30.0
+response_min_value      = -30.0
+response_mutate_power   = 0.0
+response_mutate_rate    = 0.0
+response_replace_rate   = 0.0
+
 # --- Compatibilidade ---
 compatibility_disjoint_coefficient = 1.0
 compatibility_weight_coefficient   = 0.5
 
-# --- Conexões ---
+# --- Conexões (Enable/Disable) ---
+# AQUI ESTAVA O ERRO e o próximo erro:
+enabled_default           = True
+enabled_mutate_rate       = 0.01
+enabled_rate_to_true_add  = 0.5
+enabled_rate_to_false_add = 0.0
+
+# --- Conexões (Adicionar/Remover) ---
 conn_add_prob           = 0.5
 conn_delete_prob        = 0.5
-enabled_default         = True
-enabled_mutate_rate     = 0.01
 
 # --- Estrutura da Rede ---
 feed_forward            = True
 initial_connection      = full
 
-# --- Mutação Estrutural (O que faltava) ---
-# Se True, permite apenas uma mudança estrutural (nó ou conexão) por mutação
+# --- Mutação Estrutural ---
 single_structural_mutation = False
-# Se True, garante que mutações estruturais só ocorram se não houver crossover
 structural_mutation_surer  = default
 
 # --- Nós (Neurônios) ---
@@ -57,6 +71,7 @@ num_outputs             = 4
 # --- Pesos (Weights) ---
 weight_init_mean        = 0.0
 weight_init_stdev       = 1.0
+weight_init_type        = gaussian
 weight_max_value        = 30
 weight_min_value        = -30
 weight_mutate_power     = 0.5
@@ -69,8 +84,9 @@ compatibility_threshold = 3.0
 [DefaultStagnation]
 species_fitness_func = max
 max_stagnation       = 20
-species_elapse       = 2
+species_elitism      = 2
 
 [DefaultReproduction]
 elitism            = 2
 survival_threshold = 0.2
+min_species_size   = 2
