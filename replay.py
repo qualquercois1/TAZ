@@ -1,10 +1,10 @@
 import pygame, sys, os, pickle, neat
 
-# Importa as classes e constantes do seu arquivo principal (taz.py)
-# Isso garante que a lógica de "olhar" e "mover" seja exatamente a mesma do treino
+# Importa as classes e configurações do seu arquivo principal (taz.py)
+# Certifique-se de que o arquivo principal se chama 'taz.py' e está na mesma pasta
 from taz import Cobra, Comida, comp_tela, alt_tela, comp_janela, alt_janela, tam_quadrado, inicio_x, inicio_y
 
-# Constantes de Cores (caso não tenha importado todas)
+# Constantes de Cores
 preto = (0,0,0)
 cinza_escuro = (54,54,54)
 cinza_meio = (70,70,70)
@@ -19,18 +19,19 @@ def replay_genome(config_path, genome_path="winner.pkl"):
                                 neat.DefaultSpeciesSet, neat.DefaultStagnation,
                                 config_path)
 
-    # 2. Carrega o cérebro salvo
+    # 2. Verifica se o arquivo existe
     if not os.path.exists(genome_path):
-        print(f"Erro: Arquivo '{genome_path}' não encontrado.")
+        print(f"Erro: Arquivo '{genome_path}' não encontrado. Treine a IA primeiro!")
         return
 
+    # 3. Carrega o cérebro salvo
     with open(genome_path, "rb") as f:
         genome = pickle.load(f)
 
-    # 3. Cria a rede neural
+    # 4. Cria a rede neural
     net = neat.nn.FeedForwardNetwork.create(genome, config)
 
-    # 4. Setup Pygame
+    # 5. Setup Pygame
     pygame.init()
     janela = pygame.display.set_mode((comp_janela, alt_janela))
     pygame.display.set_caption("TAZ - REPLAY VENCEDOR (Relativo)")
@@ -59,7 +60,7 @@ def replay_genome(config_path, genome_path="winner.pkl"):
         
         while run:
             if renderizar:
-                clock.tick(15) # Velocidade um pouco mais lenta para apreciar a inteligência
+                clock.tick(15) # Velocidade confortável para assistir
 
             # Eventos
             for event in pygame.event.get():
@@ -77,11 +78,11 @@ def replay_genome(config_path, genome_path="winner.pkl"):
             # 2. Rede Processa
             output = net.activate(dados)
             
-            # 3. Decisão (Agora são apenas 3 opções: 0, 1 ou 2)
+            # 3. Decisão (0=Esq, 1=Reto, 2=Dir)
             acao = output.index(max(output))
 
             # 4. Executa Movimento
-            # Não precisamos de IFs aqui, pois o método mover() do taz.py já trata 0, 1 e 2
+            # O método mover da classe Cobra já sabe converter 0/1/2 em rotação
             cobra.mover(acao)
 
             # --- LÓGICA DE JOGO ---
@@ -93,8 +94,8 @@ def replay_genome(config_path, genome_path="winner.pkl"):
                 cobra.corpo.pop()
 
             if cobra.verificar_morte() or cobra.fome <= 0:
-                print(f"Game Over! Pontuação: {pontuacao}")
-                run = False # Sai do loop interno e reseta o jogo
+                print(f"Game Over! Pontuação Final: {pontuacao}")
+                run = False # Sai do loop interno e cria nova cobra
                 break
             
             cobra.fome -= 1
@@ -122,12 +123,16 @@ def replay_genome(config_path, genome_path="winner.pkl"):
             
             else:
                 # Desenha só texto no modo turbo
+                # (Renderiza a cada 5 frames para economizar CPU)
                 if cobra.fome % 5 == 0: 
                     janela.fill(preto)
                     aviso = fonte_grande.render("MODO TURBO (REPLAY)", True, amarelo)
                     placar = fonte.render(f"Pontos: {pontuacao}", True, branco)
+                    fome_txt = fonte.render(f"Fome: {cobra.fome}", True, branco)
+                    
                     janela.blit(aviso, (comp_janela//2 - 150, alt_janela//2 - 50))
                     janela.blit(placar, (comp_janela//2 - 50, alt_janela//2 + 20))
+                    janela.blit(fome_txt, (comp_janela//2 - 40, alt_janela//2 + 50))
                     pygame.display.flip()
 
 if __name__ == "__main__":

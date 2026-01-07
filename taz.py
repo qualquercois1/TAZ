@@ -31,7 +31,7 @@ amarelo = (255, 255, 0)
 
 # Setup da Janela
 janela = pygame.display.set_mode((comp_janela, alt_janela))
-pygame.display.set_caption("TAZ - Treinamento IA (Relativo)")
+pygame.display.set_caption("TAZ - Treinamento IA (Relativo + Raycasting)")
 
 # Background
 fundo = pygame.Surface((comp_tela, alt_tela))
@@ -80,7 +80,7 @@ class Cobra:
         self.resetar()
 
     def resetar(self):
-        # MUDANÇA: Início Aleatório para evitar vício de posição
+        # Início Aleatório para evitar vício
         max_x = comp_tela // tam_quadrado
         max_y = alt_tela // tam_quadrado
         
@@ -92,7 +92,7 @@ class Cobra:
         self.direcao = random.choice(["DIREITA", "ESQUERDA", "CIMA", "BAIXO"])
         
         self.viva = True
-        self.fome_max = 100
+        self.fome_max = 200 
         self.fome = self.fome_max
 
     # Helper para "olhar" em uma direção relativa
@@ -102,42 +102,44 @@ class Cobra:
         max_y = alt_tela // tam_quadrado
         distancia = 0
         
-        # Olha até o infinito (ou até achar corpo)
-        while True:
+        # Limita a visão a metade do mapa (mundo toroidal)
+        limite = max(max_x, max_y) // 2 
+
+        for _ in range(limite):
             olho_x = (olho_x + vec_x) % max_x
             olho_y = (olho_y + vec_y) % max_y
             distancia += 1
             
-            # Se bateu no corpo
             if [olho_x, olho_y] in self.corpo:
-                return 1.0 / distancia # Retorna inverso da distância
+                return 1.0 / distancia # Retorna inverso da distância (1.0 = PERTO)
             
-            # Se deu a volta completa no mapa e não achou nada, é seguro (0)
-            if distancia > max(max_x, max_y):
-                return 0.0
+        return 0.0
 
     def inputs(self, pos_comida):
-        # --- DEFINIR VETORES RELATIVOS ---
-        # Baseado na direção atual, o que é Frente, Esquerda e Direita?
-        # Vetor (x, y)
+        # Mapeamento de Vetores Relativos
         vetores = {
-            "CIMA":     {"frente": (0, -1), "esquerda": (-1, 0), "direita": (1, 0)},
-            "BAIXO":    {"frente": (0, 1),  "esquerda": (1, 0),  "direita": (-1, 0)},
-            "ESQUERDA": {"frente": (-1, 0), "esquerda": (0, 1),  "direita": (0, -1)},
-            "DIREITA":  {"frente": (1, 0),  "esquerda": (0, -1), "direita": (0, 1)}
+            "CIMA":     (0, -1),
+            "BAIXO":    (0, 1),
+            "ESQUERDA": (-1, 0),
+            "DIREITA":  (1, 0)
         }
         
-        v = vetores[self.direcao]
+        frente = vetores[self.direcao]
+        esquerda = (frente[1], -frente[0]) 
+        direita = (-frente[1], frente[0])  
+        
+        # Vetores Diagonais
+        diag_fe = (frente[0] + esquerda[0], frente[1] + esquerda[1])
+        diag_fd = (frente[0] + direita[0], frente[1] + direita[1])
 
-        # --- 1. PERIGO (Relative Raycasting) ---
-        # "Tem perigo na minha frente?"
-        p_frente = self.olhar_na_direcao_vetor(v["frente"][0], v["frente"][1])
-        p_esq = self.olhar_na_direcao_vetor(v["esquerda"][0], v["esquerda"][1])
-        p_dir = self.olhar_na_direcao_vetor(v["direita"][0], v["direita"][1])
+        # --- 1. SENSORES DE PERIGO (5 Sensores) ---
+        p_frente = self.olhar_na_direcao_vetor(frente[0], frente[1])
+        p_esq = self.olhar_na_direcao_vetor(esquerda[0], esquerda[1])
+        p_dir = self.olhar_na_direcao_vetor(direita[0], direita[1])
+        p_diag_fe = self.olhar_na_direcao_vetor(diag_fe[0], diag_fe[1])
+        p_diag_fd = self.olhar_na_direcao_vetor(diag_fd[0], diag_fd[1])
 
-        # --- 2. COMIDA (Angulo Relativo) ---
-        # Vamos descobrir onde a comida está em relação à cabeça
-        # Usando lógica toroidal
+        # --- 2. COMIDA (Angulo Relativo Toroidal) ---
         cx, cy = pos_comida
         hx, hy = self.cabeca_pos
         max_x = comp_tela // tam_quadrado
@@ -146,61 +148,41 @@ class Cobra:
         dx = cx - hx
         dy = cy - hy
 
-        # Ajuste Toroidal
         if abs(dx) > max_x / 2: dx = -dx
         if abs(dy) > max_y / 2: dy = -dy
 
-        # Agora, a comida está à esquerda, direita ou frente da direção atual?
-        # Isso é pura geometria. Vamos simplificar com Booleanos para a comida
-        
-        food_frente = 0
-        food_esq = 0
-        food_dir = 0
-        
-        # Lógica simplificada: Comida está na direção do vetor?
-        # Ex: Se estou indo para CIMA (dy < 0) e a comida está em cima (dy < 0) -> Frente
-        
-        if self.direcao == "CIMA":
-            if dy < 0: food_frente = 1
-            if dx < 0: food_esq = 1
-            if dx > 0: food_dir = 1
-        elif self.direcao == "BAIXO":
-            if dy > 0: food_frente = 1
-            if dx > 0: food_esq = 1 # Se olho pra baixo, direita global é minha esquerda
-            if dx < 0: food_dir = 1
-        elif self.direcao == "ESQUERDA":
-            if dx < 0: food_frente = 1
-            if dy > 0: food_esq = 1
-            if dy < 0: food_dir = 1
-        elif self.direcao == "DIREITA":
-            if dx > 0: food_frente = 1
-            if dy < 0: food_esq = 1
-            if dy > 0: food_dir = 1
+        # Normaliza Deltas
+        ndx = dx / max_x
+        ndy = dy / max_y
 
-        # Inputs do NEAT (11 Neurônios)
-        # [PerigoF, PerigoE, PerigoD, ComidaF, ComidaE, ComidaD, ...]
-        # Adicionei os deltas normalizados também para ajudar na precisão
+        # Produto escalar para saber direção da comida
+        dot_frente = (dx * frente[0]) + (dy * frente[1])
+        dot_esq = (dx * esquerda[0]) + (dy * esquerda[1])
+        dot_dir = (dx * direita[0]) + (dy * direita[1])
+
+        c_frente = 1 if dot_frente > 0 else 0
+        c_esq = 1 if dot_esq > 0 else 0
+        c_dir = 1 if dot_dir > 0 else 0
+        
+        # Retorna 12 Inputs
         return [
-            p_frente, p_esq, p_dir,
-            food_frente, food_esq, food_dir,
-            # Inputs extras que ajudam a triangular a posição exata
-            dx / max_x, 
-            dy / max_y
+            p_frente, p_esq, p_dir, p_diag_fe, p_diag_fd, 
+            c_frente, c_esq, c_dir, 
+            ndx, ndy, 
+            0, 0 # Padding
         ]
 
     def mover(self, acao_relativa):
-        # Ação Relativa: 0 = Esquerda, 1 = Reto, 2 = Direita
-        
+        # 0 = Esquerda, 1 = Reto, 2 = Direita
         ordem_horaria = ["CIMA", "DIREITA", "BAIXO", "ESQUERDA"]
         idx_atual = ordem_horaria.index(self.direcao)
 
-        if acao_relativa == 0: # Virar Esquerda (Anti-horário)
+        if acao_relativa == 0: # Esquerda
             idx_novo = (idx_atual - 1) % 4
             self.direcao = ordem_horaria[idx_novo]
-        elif acao_relativa == 2: # Virar Direita (Horário)
+        elif acao_relativa == 2: # Direita
             idx_novo = (idx_atual + 1) % 4
             self.direcao = ordem_horaria[idx_novo]
-        # Se for 1, mantém a direção (Reto)
 
         nova_pos = list(self.corpo[0])
         if self.direcao == "CIMA": nova_pos[1] -= 1
@@ -227,9 +209,7 @@ class Cobra:
 
     def desenhar(self, surface):
         for i, pedaco in enumerate(self.corpo):
-            # Desenha cabeça diferente para sabermos onde ela olha
             cor = verde_neon if i == 0 else roxo
-            
             rect = pygame.Rect(
                 (pedaco[0] * tam_quadrado) + 2,
                 (pedaco[1] * tam_quadrado) + 2,
@@ -280,21 +260,22 @@ def eval_genomes(genomes, config):
             # --- DECISÃO DA IA ---
             dados_entrada = cobra.inputs(comidas[i].pos)
             output = redes[i].activate(dados_entrada)
-            # Agora output tem 3 valores: [Esq, Reto, Dir]
             acao = output.index(max(output))
 
-            cobra.mover(acao) # Passamos a ação (0, 1 ou 2)
+            cobra.mover(acao) 
 
             dist_depois = distancia_toroidal(cobra.cabeca_pos, comidas[i].pos)
 
             # Recompensa Quente/Frio
             if dist_depois < dist_antes:
-                lista_ge[i].fitness += 1
+                lista_ge[i].fitness += 1.0
             else:
-                lista_ge[i].fitness -= 2 # Punição um pouco maior para evitar loops
+                lista_ge[i].fitness -= 0.1 # Punição leve para permitir desvios
+
+            lista_ge[i].fitness += 0.05 # Sobrevivência
 
             if cobra.cabeca_pos == comidas[i].pos:
-                lista_ge[i].fitness += 30 
+                lista_ge[i].fitness += 20 
                 cobra.fome = cobra.fome_max
                 comidas[i].gerar_nova_posicao(cobra.corpo)
             else:
@@ -304,7 +285,7 @@ def eval_genomes(genomes, config):
             morreu_fome = cobra.fome <= 0
 
             if morreu_colisao or morreu_fome or lista_ge[i].fitness < -20:
-                if morreu_colisao: lista_ge[i].fitness -= 30
+                if morreu_colisao: lista_ge[i].fitness -= 20
                 if morreu_fome: lista_ge[i].fitness -= 10
                 
                 redes.pop(i)
@@ -331,7 +312,6 @@ def eval_genomes(genomes, config):
 
             janela.blit(tela, (inicio_x, inicio_y))
 
-            # Infos
             infos = [f"Geração: {gen}", f"Vivos: {len(cobras)}", f"Fome: {cobras[0].fome}", txt_m]
             for idx, info in enumerate(infos):
                 t = fonte.render(info, True, branco)
@@ -355,7 +335,8 @@ def run(config_path):
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
     
-    winner = p.run(eval_genomes, 50)
+    winner = p.run(eval_genomes, 50) # Roda 300 gerações
+    print('\nMelhor genoma salvo em winner.pkl')
     with open("winner.pkl", "wb") as f:
         pickle.dump(winner, f)
 

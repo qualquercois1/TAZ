@@ -64,7 +64,7 @@ node_add_prob           = 0.2
 node_delete_prob        = 0.2
 
 # --- INPUTS E OUTPUTS ---
-num_inputs              = 8
+num_inputs              = 12
 num_hidden              = 0
 num_outputs             = 3
 
