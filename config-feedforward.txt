@@ -1,6 +1,6 @@
 [NEAT]
 fitness_criterion     = max
-fitness_threshold     = 3000
+fitness_threshold     = 5000
 pop_size              = 150
 reset_on_extinction   = False
 no_fitness_termination = False
@@ -64,7 +64,7 @@ node_add_prob           = 0.2
 node_delete_prob        = 0.2
 
 # --- INPUTS E OUTPUTS ---
-num_inputs              = 12
+num_inputs              = 15
 num_hidden              = 0
 num_outputs             = 3
 
